@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>POOKIE PARKOUR 3D - PRIYANKA & AYUSH</title>
+<style>
+body{margin:0;overflow:hidden;font-family:system-ui,-apple-system,sans-serif;background:#ffe5ec}
+#ui{position:fixed;inset:0;pointer-events:none;color:#4a3b52}
+.panel{pointer-events:auto;background:#fff0f3ee;border:3px solid white;border-radius:16px;padding:12px;box-shadow:0 5px 0 #0002}
+#top{position:absolute;top:12px;left:12px;font-weight:bold;font-size:12px;color:#ff477e}
+/* Watermark on Top Right */
+#watermark{position:absolute;top:12px;right:14px;pointer-events:auto;background:#fff0f3ee;border:3px solid white;border-radius:14px;padding:8px 12px;font-size:11px;font-weight:900;color:#ff477e;box-shadow:0 3px 0 #ff8fab44;letter-spacing:.05em}
+
+#outfits{position:absolute;left:12px;top:105px;width:190px}
+button{cursor:pointer;border:0;border-radius:10px;padding:10px;margin:3px;background:#ff8fab;color:white;font-weight:bold}
+#controls{position:absolute;bottom:20px;left:15px;right:15px;display:flex;justify-content:space-between;align-items:end;pointer-events:auto}
+#controls button{width:65px;height:60px;font-size:17px;background:#ffccd5;color:#6b3f52;border:2px solid white}
+#start{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#ffe5ecbb;pointer-events:auto}
+#card{background:#fff0f3;padding:22px;border:4px solid white;border-radius:24px;text-align:center;width:min(400px,92vw);box-shadow:0 10px 0 #ff8fab55;max-height:95vh;overflow-y:auto}
+h1{color:#ff477e;margin:5px 0 10px;font-size:26px}
+#status{position:absolute;top:68px;left:12px;font-weight:bold;font-size:12px;background:#fff0f3dd;padding:5px 10px;border-radius:99px;border:2px solid #ffccd5}
+
+/* Emotes Panel */
+#emotes{position:absolute;right:14px;top:68px;display:flex;flex-direction:column;gap:5px;pointer-events:auto}
+.emote-btn{background:#fff;border:2px solid #ffccd5;color:#ff477e;border-radius:10px;padding:6px 10px;font-size:11px;font-weight:900;box-shadow:0 3px 0 #ff8fab33}
+
+#speech{position:absolute;z-index:22;max-width:220px;padding:6px 10px;border-radius:12px;background:#fff0f3;color:#5a3f6b;border:2px solid white;box-shadow:0 4px 0 #0002;font-size:11px;font-weight:800;display:none;pointer-events:none;text-align:center;transform:translate(-50%,-100%)}
+
+.diff-btn{background:#ffd166;color:#5a3f6b;width:30%;padding:8px 5px;font-size:11px;border-radius:8px;font-weight:bold}
+.diff-btn.active{background:#ff477e;color:white;box-shadow:0 3px 0 #c94f69}
+
+.input-field{width:100%;padding:9px;border:2px solid #ffccd5;border-radius:10px;font-size:12px;margin:4px 0 8px;color:#4a3b52;background:white}
+.row-inputs{display:flex;gap:6px}
+
+@media(max-width:650px){#outfits{display:none}}
+</style>
+</head>
+<body>
+<div id="ui">
+ <div id="top" class="panel">☁️ POOKIE PARKOUR 3D<br>
+ ⭐ Stars: <span id="stars">0</span> | <span id="room-badge">ROOM: SOLO</span></div>
+ 
+ <div id="watermark">💖 PRIYANKA 🤍 AYUSH GAMARE ✨</div>
+ <div id="status">Jump across the pookie steps!</div>
+ 
+ <div id="emotes">
+  <button class="emote-btn" onclick="triggerEmote('💖 KISS')">💖 Kiss</button>
+  <button class="emote-btn" onclick="triggerEmote('👋 HELLO')">👋 Hello</button>
+  <button class="emote-btn" onclick="triggerEmote('💃 DANCE')">💃 Dance</button>
+  <button class="emote-btn" onclick="triggerEmote('🎉 CHEER')">🎉 Cheer</button>
+ </div>
+
+ <div id="outfits" class="panel">
+  <b>🎀 OUTFITS</b><br>
+  <button onclick="dress('#ff758f','#9b6bd6')">🍓 Berry Girl</button>
+  <button onclick="dress('#ffb703','#6d9d62')">🍋 Lemon Star</button>
+  <button onclick="dress('#8ecae6','#334b88')">🫐 Bubble Blue</button>
+  <button onclick="dress('#b5e48c','#357c68')">🍈 Mint Hoodie</button>
+ </div>
+ <div id="controls">
+  <div><button id="left">◀</button><button id="right">▶</button></div>
+  <button id="jump">⬆ JUMP</button>
+ </div>
+</div>
+
+<div id="speech"></div>
+
+<!-- LOBBY SCREEN -->
+<div id="start"><div id="card">
+ <h1 id="lobby-title">POOKIE WORLD</h1>
+ <p id="lobby-desc">Choose difficulty, pick your cute outfit, and collect stars across the sky map!</p>
+ 
+ <input id="pk-name" class="input-field" maxlength="18" value="Pookie Star" placeholder="Your player name">
+
+ <div style="font-size:11px;font-weight:bold;margin:6px 0 4px">SELECT DIFFICULTY</div>
+ <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+  <button class="diff-btn active" id="btn-easy" onclick="setDiff('easy')">🌱 Easy</button>
+  <button class="diff-btn" id="btn-normal" onclick="setDiff('normal')">🌸 Normal</button>
+  <button class="diff-btn" id="btn-hard" onclick="setDiff('hard')">🔥 Hard</button>
+ </div>
+
+ <button onclick="startSolo()" style="font-size:14px;padding:12px;background:#35a853;color:white;width:100%;border-radius:12px;font-weight:bold;box-shadow:0 4px 0 #247539;cursor:pointer">🚀 QUICK SOLO PLAY</button>
+ 
+ <div style="margin:8px 0; font-size:10px; font-weight:bold; color:#8a6a7a">— OR JOIN A ROOM —</div>
+
+ <div class="row-inputs">
+  <input id="room-name" class="input-field" maxlength="15" placeholder="Room Name">
+  <input id="room-pass" class="input-field" type="password" maxlength="10" placeholder="Pass (Opt)">
+ </div>
+ 
+ <button onclick="startRoom()" style="font-size:14px;padding:12px;background:#ff758f;color:white;width:100%;border-radius:12px;font-weight:bold;box-shadow:0 4px 0 #c94f69;cursor:pointer">✨ CREATE / JOIN ROOM</button>
+</div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script>
+const scene=new THREE.Scene();
+scene.background=new THREE.Color('#cbe6ff');
+scene.fog=new THREE.Fog('#cbe6ff',60,240);
+
+const camera=new THREE.PerspectiveCamera(62,innerWidth/innerHeight,.1,500);
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth,innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
+renderer.shadowMap.enabled=true;
+document.body.appendChild(renderer.domElement);
+renderer.domElement.style.cssText='position:fixed;inset:0;z-index:-1';
+
+scene.add(new THREE.HemisphereLight(0xffffff,0xffccd5,2.4));
+const sun=new THREE.DirectionalLight(0xfff5f7,2.6);
+sun.position.set(-40,60,40);
+sun.castShadow=true;
+scene.add(sun);
+
+const material=c=>new THREE.MeshStandardMaterial({color:c,flatShading:true,roughness:.75});
+const pastelColors=['#ffb3c6','#bde0fe','#a2d2ff','#ffd166','#c77dff','#b5e48c','#ff8fab','#9bf6ff','#ffcad4','#b8b8ff'];
+
+function cube(w,h,d,mat,x,y,z){
+ const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);
+ m.position.set(x,y,z);
+ m.castShadow=true;
+ m.receiveShadow=true;
+ scene.add(m);
+ return m;
+}
+
+// Plane Surface (Ground Floor) Underneath
+const groundPlane = new THREE.Mesh(
+ new THREE.PlaneGeometry(500, 500),
+ new THREE.MeshStandardMaterial({color: '#a7d879', roughness: 0.9, flatShading: true})
+);
+groundPlane.rotation.x = -Math.PI / 2;
+groundPlane.position.y = -18;
+groundPlane.receiveShadow = true;
+scene.add(groundPlane);
+
+// Main Starting Island
+cube(28,1.2,28,material('#ff758f'),0,-.6,0);
+cube(28,.2,28,material('#ffb3c6'),0,.05,0);
+
+// --- MAP & DIFFICULTY CONFIGURATIONS ---
+let currentDiff = 'normal';
+let platforms = [];
+
+function buildMap(diff){
+ platforms.forEach(p => { 
+  if(p.mesh) scene.remove(p.mesh); 
+  if(p.topMesh) scene.remove(p.topMesh); 
+  if(p.deco) scene.remove(p.deco);
+ });
+ 
+ let stepDist = (diff==='easy') ? 8 : (diff==='normal') ? 11 : 14;
+ let stepSize = (diff==='easy') ? 7 : (diff==='normal') ? 6 : 5;
+
+ platforms=[
+  {x:0,z:0,y:0,w:28,d:28},
+  {x:0,z:-14,y:2.0,w:stepSize,d:stepSize},
+  {x:6,z:-14-(stepDist*1),y:4.0,w:stepSize,d:stepSize},
+  {x:12,z:-14-(stepDist*2),y:6.0,w:stepSize,d:stepSize},
+  {x:5,z:-14-(stepDist*3),y:8.0,w:stepSize,d:stepSize},
+  {x:-3,z:-14-(stepDist*4),y:10.0,w:stepSize,d:stepSize},
+  {x:-11,z:-14-(stepDist*5),y:12.0,w:stepSize,d:stepSize},
+  {x:-5,z:-14-(stepDist*6),y:14.0,w:stepSize,d:stepSize},
+  {x:4,z:-14-(stepDist*7),y:16.0,w:stepSize,d:stepSize},
+  {x:12,z:-14-(stepDist*8),y:18.0,w:stepSize,d:stepSize},
+  {x:6,z:-14-(stepDist*9),y:20.0,w:stepSize,d:stepSize},
+  {x:-2,z:-14-(stepDist*10),y:22.0,w:stepSize,d:stepSize},
+  {x:-10,z:-14-(stepDist*11),y:24.0,w:stepSize,d:stepSize},
+  {x:-4,z:-14-(stepDist*12),y:26.0,w:stepSize,d:stepSize},
+  {x:5,z:-14-(stepDist*13),y:28.0,w:stepSize,d:stepSize},
+  {x:12,z:-14-(stepDist*14),y:30.0,w:stepSize,d:stepSize},
+  {x:0,z:-14-(stepDist*15),y:32.0,w:12,d:12} // Final Goal Island
+ ];
+
+ platforms.slice(1).forEach((p,i)=>{
+  let col = material(pastelColors[i % pastelColors.length]);
+  let topCol = material('#ffffff');
+  let m1 = cube(p.w,.8,p.d,col,p.x,p.y-.3,p.z);
+  let m2 = cube(p.w-.4,.2,p.d-.4,topCol,p.x,p.y+.15,p.z);
+  p.mesh = m1;
+  p.topMesh = m2;
+
+  if(i % 2 === 0 && i < platforms.length - 1){
+   let decoX = p.x > 0 ? p.x - 12 : p.x + 12;
+   let deco = cube(4, 2, 4, material(pastelColors[(i+3) % pastelColors.length]), decoX, p.y - 4, p.z - 5);
+   p.deco = deco;
+  }
+ });
+}
+buildMap('normal');
+
+function setDiff(d){
+ currentDiff = d;
+ document.querySelectorAll('.diff-btn').forEach(b=>b.classList.remove('active'));
+ document.getElementById('btn-'+d).classList.add('active');
+ buildMap(d);
+}
+
+// Scenery: Hot Air Balloons & Fluffy Clouds
+function airBalloon(x,y,z, col){
+ cube(.3, 5, .3, material('#fff'), x, y, z);
+ cube(3, 3, 3, material(col), x, y+3, z);
+ cube(1.2, 1.2, 1.2, material('#946c50'), x, y-1.8, z);
+}
+airBalloon(-25, 14, -40, '#ff758f');
+airBalloon(28, 20, -90, '#ffd166');
+airBalloon(-30, 26, -150, '#a2d2ff');
+airBalloon(25, 32, -210, '#c77dff');
+
+for(let i=0;i<30;i++){
+ const x=(i*37)%160-80;
+ const z=-130+(i*19)%180;
+ for(let j=0;j<3;j++){
+  const c=new THREE.Mesh(new THREE.IcosahedronGeometry(2,1),material('#fffdf5'));
+  c.position.set(x+j*1.6,12+(i%6)*5,z);
+  scene.add(c);
+ }
+}
+
+// Minecraft-style girl character
+const girl=new THREE.Group();
+scene.add(girl);
+
+const parts={};
+function block(name,w,h,d,color,x,y,z){
+ const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material(color));
+ m.position.set(x,y,z);
+ m.castShadow=true;
+ girl.add(m);
+ parts[name]=m;
+ return m;
+}
+
+block('body',.85,.9,.42,'#ff758f',0,1.30,0);
+block('head',.8,.8,.8,'#d9a078',0,2.15,0);
+block('hair',.84,.22,.84,'#493024',0,2.62,0);
+block('armL',.27,.85,.38,'#d9a078',-.57,1.32,0);
+block('armR',.27,.85,.38,'#d9a078',.57,1.32,0);
+block('legL',.34,.72,.38,'#9b6bd6',-.23,.48,0);
+block('legR',.34,.72,.38,'#9b6bd6',.23,.48,0);
+block('shoeL',.36,.18,.44,'#292929',-.23,.10,.02);
+block('shoeR',.36,.18,.44,'#292929',.23,.10,.02);
+block('eyeL',.12,.10,.035,'#ffffff',-.19,2.25,0.415);
+block('eyeR',.12,.10,.035,'#ffffff',.19,2.25,0.415);
+
+function dress(shirt,pants){
+ parts.body.material.color.set(shirt);
+ parts.legL.material.color.set(pants);
+ parts.legR.material.color.set(pants);
+ document.getElementById('status').textContent='✨ Outfit updated!';
+}
+
+// Collectible Stars
+let collectibles=[];
+function spawnStars(){
+ collectibles.forEach(s=>scene.remove(s));
+ collectibles=[];
+ platforms.slice(1).forEach(p=>{
+  const s=new THREE.Mesh(
+   new THREE.BoxGeometry(.7,.7,.7),
+   material('#ffe45c')
+  );
+  s.position.set(p.x,p.y+1.6,p.z);
+  s.castShadow=true;
+  scene.add(s);
+  collectibles.push(s);
+ });
+}
+spawnStars();
+
+// Emotes / Actions
+function triggerEmote(text){
+ const speech = document.getElementById('speech');
+ speech.textContent = 'Pookie: ' + text;
+ speech.style.display = 'block';
+ clearTimeout(window.bubbleTimer);
+ window.bubbleTimer = setTimeout(()=> speech.style.display='none', 4000);
+}
+
+// Movement, Jumping & Double Jump
+let x=0,z=2,y=0,vy=0, targetRotation=0;
+let grounded=true, canDoubleJump=false, playing=false, score=0;
+let playerName='Pookie Star', roomName='SOLO';
+const keys={};
+let moveX=0;
+
+addEventListener('keydown',e=>{
+ keys[e.code]=true;
+ if(e.code==='Space')doJump();
+});
+addEventListener('keyup',e=>keys[e.code]=false);
+
+function hold(id,val){
+ const b=document.getElementById(id);
+ b.addEventListener('pointerdown',e=>{e.preventDefault();moveX=val;});
+ ['pointerup','pointercancel','pointerleave'].forEach(ev=>
+  b.addEventListener(ev,()=>{if(moveX===val)moveX=0})
+ );
+}
+hold('left',-1);
+hold('right',1);
+
+function doJump(){
+ if(!playing)return;
+ if(grounded){
+  vy = 11;
+  grounded = false;
+  canDoubleJump = true;
+ } else if(canDoubleJump){
+  vy = 10.5; // Extra Udi (Double Jump)
+  canDoubleJump = false;
+  document.getElementById('status').textContent='🚀 Double Jump!';
+ }
+}
+document.getElementById('jump').addEventListener('pointerdown',e=>{
+ e.preventDefault();doJump();
+});
+
+function launchGame(isSolo){
+ playerName = document.getElementById('pk-name').value.trim().slice(0,18) || 'Pookie Star';
+ if(isSolo){
+  roomName = 'SOLO';
+ } else {
+  let rInp = document.getElementById('room-name').value.trim();
+  roomName = rInp ? rInp : 'PUBLIC ROOM';
+ }
+ document.getElementById('room-badge').textContent = 'ROOM: ' + roomName.toUpperCase();
+ playing=true;
+ score=0;
+ document.getElementById('stars').textContent='0';
+ document.getElementById('start').style.display='none';
+ document.getElementById('status').textContent='Collect stars and reach the finish!';
+ respawn();
+ spawnStars();
+}
+
+function startSolo(){ launchGame(true); }
+function startRoom(){ launchGame(false); }
+
+function respawn(){
+ const p=platforms[0];
+ x=p.x;z=p.z+2;y=p.y;vy=0;
+ grounded=true;
+ canDoubleJump=false;
+}
+
+let previous=0;
+function animate(t){
+ requestAnimationFrame(animate);
+ const dt=Math.min((t-previous)/1000||0,.035);
+ previous=t;
+
+ if(playing){
+  let dx=moveX+(keys.KeyD||keys.ArrowRight?1:0)
+               -(keys.KeyA||keys.ArrowLeft?1:0);
+  let dz=(keys.KeyS||keys.ArrowDown?1:0)
+               -(keys.KeyW||keys.ArrowUp?1:0);
+
+  const len=Math.hypot(dx,dz);
+  if(len>1){dx/=len;dz/=len;}
+
+  if(len > 0.05){
+   targetRotation = Math.atan2(dx, dz);
+  }
+
+  x+=dx*8.5*dt;
+  z+=dz*8.5*dt;
+
+  vy-=24*dt;
+  y+=vy*dt;
+  grounded=false;
+
+  for(const p of platforms){
+   if(x>p.x-p.w/2-.3&&x<p.x+p.w/2+.3&&
+      z>p.z-p.d/2-.3&&z<p.z+p.d/2+.3&&
+      y<=p.y+.4&&y>=p.y-.8&&vy<=0){
+    y=p.y;vy=0;grounded=true;canDoubleJump=false;
+   }
+  }
+
+  girl.position.set(x,y,z);
+  girl.rotation.y += (targetRotation - girl.rotation.y) * 15 * dt;
+
+  if(y < -12){
+   respawn();
+   document.getElementById('status').textContent='Oops! Back to start 😊';
+  }
+
+  collectibles.forEach(s=>{
+   s.rotation.y += dt*2;
+   if(s.visible&&girl.position.distanceTo(s.position)<1.4){
+    s.visible=false;
+    score++;
+    document.getElementById('stars').textContent=score;
+    document.getElementById('status').textContent='Star collected! ⭐';
+   }
+  });
+
+  const finalP = platforms[platforms.length-1];
+  if(z < finalP.z - 4){
+   playing=false;
+   document.getElementById('status').textContent='🏆 PARKOUR COMPLETE!';
+   document.getElementById('start').style.display='flex';
+   document.getElementById('lobby-title').textContent='YOU DID IT! 🏆';
+   document.getElementById('lobby-desc').innerHTML='You conquered <b>' + roomName + '</b> mode in <b>' + currentDiff.toUpperCase() + '</b> and collected <b>' + score + ' stars</b>!';
+  }
+ }
+
+ let camTargetPos = new THREE.Vector3(x + Math.sin(girl.rotation.y)*3.5, y + 5, z + 11);
+ camera.position.lerp(camTargetPos,.12);
+ camera.lookAt(x, y + 1.3, z - 2);
+
+ if(playing){
+  let vector = new THREE.Vector3(x, y + 3.2, z).project(camera);
+  let sx = (vector.x * .5 + .5) * innerWidth;
+  let sy = (-(vector.y * .5) + .5) * innerHeight;
+  const speech = document.getElementById('speech');
+  if(speech.style.display === 'block'){
+   speech.style.left = sx + 'px';
+   speech.style.top = sy + 'px';
+  }
+ }
+
+ renderer.render(scene,camera);
+}
+requestAnimationFrame(animate);
+
+addEventListener('resize',()=>{
+ camera.aspect=innerWidth/innerHeight;
+ camera.updateProjectionMatrix();
+ renderer.setSize(innerWidth,innerHeight);
+});
+</script>
+</body>
+</html>
