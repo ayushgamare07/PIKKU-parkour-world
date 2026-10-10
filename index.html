@@ -16,6 +16,8 @@
   #bottom{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);display:flex;gap:8px;align-items:center;pointer-events:auto}
   button,select{font:inherit;color:var(--ink);border:0;border-radius:13px;padding:9px 12px;font-weight:800;background:#fff;box-shadow:0 3px 0 #d7cbe9;cursor:pointer}
   button:active{transform:translateY(2px);box-shadow:0 1px 0 #d7cbe9}
+  #progressWrap{position:absolute;left:50%;top:68px;transform:translateX(-50%);width:min(310px,45vw);padding:8px 12px;font-size:11px;font-weight:800}#progressLabel{display:flex;justify-content:space-between;gap:10px;margin-bottom:5px}#progressTrack{height:8px;background:#e9def5;border-radius:99px;overflow:hidden}#progressFill{height:100%;width:0;background:linear-gradient(90deg,#ff91c9,#ffcf48,#91dcff);border-radius:99px;transition:width .2s}
+  .touchActions{display:flex;align-items:end;gap:9px;pointer-events:auto}.sprint{width:58px;height:58px;border-radius:50%;padding:0;background:#ffe58b;color:#745c39;border:2px solid white;font-size:11px;touch-action:none}
   #toast{position:absolute;left:50%;top:23%;transform:translateX(-50%);font-weight:900;font-size:clamp(18px,4vw,30px);text-shadow:0 2px #fff;background:#fff9;padding:8px 18px;border-radius:20px;opacity:0;transition:opacity .25s;text-align:center}
   #overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,#c7f1ffdd,#ffd7f0e8);z-index:5;padding:18px}
   #card{width:min(560px,100%);background:#fffdfd;border:3px solid white;border-radius:28px;padding:clamp(20px,4vw,34px);box-shadow:0 20px 60px #625c8b38;text-align:center}
@@ -30,19 +32,26 @@
   #netStatus{font-size:12px;font-weight:800;min-height:18px;color:#6a5792}
   #roomCodeDisplay{display:none;font-weight:900;letter-spacing:2px;background:#f4eaff;border-radius:12px;padding:8px 12px;margin:8px auto;width:max-content}
   #touch{position:fixed;inset:auto 0 75px 0;display:none;justify-content:space-between;align-items:end;padding:0 18px;pointer-events:none;z-index:3}
+  #chatToggle{position:fixed;right:12px;bottom:14px;z-index:4;pointer-events:auto;background:#fff0fa;border:2px solid white}
+  #chatBox{position:fixed;right:12px;bottom:68px;width:min(310px,85vw);height:300px;max-height:45vh;display:none;flex-direction:column;gap:8px;padding:10px;z-index:4;pointer-events:auto}
+  #chatBubble{position:fixed;display:none;z-index:6;max-width:min(240px,65vw);padding:8px 12px;border:2px solid #fff;border-radius:16px;background:#fffaf3;color:#463a67;font-weight:800;font-size:13px;box-shadow:0 5px 18px #463a6730;pointer-events:none;overflow-wrap:anywhere}#chatBubble:after{content:"";position:absolute;left:18px;bottom:-9px;width:14px;height:14px;background:#fffaf3;border-right:2px solid white;border-bottom:2px solid white;transform:rotate(45deg)}
+  #chatLog{flex:1;overflow:auto;background:#ffffffa8;border-radius:10px;padding:8px;font-size:13px;text-align:left;overflow-wrap:anywhere}
+  #chatRow{display:flex;gap:6px}#chatInput{min-width:0;flex:1;border:2px solid #eadcf5;border-radius:10px;padding:8px;font:inherit}#chatSend{padding:8px 10px}
+  @media(max-width:600px){#chatToggle{bottom:8px;right:8px}#chatBox{bottom:60px}}
   .pad{display:grid;grid-template-columns:52px 52px 52px;grid-template-rows:52px 52px;gap:5px;pointer-events:auto}
   .pad button,.jump{background:#ffffffbf;border:2px solid #fff;font-size:20px;width:52px;height:52px;padding:0;border-radius:16px;touch-action:none}
   .pad .up{grid-column:2;grid-row:1}.pad .left{grid-column:1;grid-row:2}.pad .down{grid-column:2;grid-row:2}.pad .right{grid-column:3;grid-row:2}
-  .jump{width:72px;height:72px;border-radius:50%;background:#ff91c9e8;color:#fff;font-size:14px}
-  @media (pointer:coarse){#touch{display:flex}#tip{top:72px;max-width:80vw}#bottom{bottom:8px}}
+  .jump{width:84px;height:84px;border-radius:50%;position:relative;z-index:5;touch-action:manipulation;user-select:none;-webkit-user-select:none;background:#ff91c9e8;color:#fff;font-size:14px}
+  @media (pointer:coarse){#touch{display:flex}#tip{top:72px;max-width:80vw}#progressWrap{top:115px;width:min(300px,75vw)}#bottom{bottom:8px}}
 </style>
 </head>
 <body>
 <div id="hud">
   <div id="brand" class="panel">🌈 CUTIE PARKOUR WORLD</div>
-  <div id="tip" class="panel">WASD / arrows · SPACE jump · stars ✨ · Online room mode available</div>
+  <div id="tip" class="panel">WASD / arrows · SPACE jump · SHIFT sprint · double jump ✨</div>
   <div id="stats" class="panel">⭐ Stars: <span id="stars">0</span>/<span id="total">8</span><br>🏁 Checkpoint: <span id="checkpoint">Start</span><br>🎯 Mode: <span id="modeLabel">Easy</span></div>
   <div id="toast"></div>
+  <div id="progressWrap" class="panel"><div id="progressLabel">🌈 Castle progress <b id="progressText">0%</b></div><div id="progressTrack"><div id="progressFill"></div></div></div>
   <div id="bottom" class="panel">
     <select id="difficulty" aria-label="Difficulty">
       <option value="easy">🟢 Easy</option><option value="normal">🟡 Normal</option><option value="hard">🔴 Hard</option>
@@ -54,22 +63,25 @@
   <div class="pad">
     <button class="up" data-key="w">▲</button><button class="left" data-key="a">◀</button><button class="down" data-key="s">▼</button><button class="right" data-key="d">▶</button>
   </div>
-  <button class="jump" id="jumpBtn">JUMP ✨</button>
+  <div class="touchActions"><button class="sprint" id="sprintBtn">⚡ RUN</button><button class="jump" id="jumpBtn">JUMP ✨</button></div>
 </div>
+<div id="chatBubble"></div><button id="chatToggle">💬 Chat</button><div id="chatBox" class="panel"><b>💗 Player chat</b><div id="chatLog">Room chat ready. Join the same room to chat with your friend.</div><div id="chatRow"><input id="chatInput" maxlength="160" placeholder="Say something…"><button id="chatSend">Send</button></div></div>
 <div id="overlay">
   <div id="card">
     <h1>Cutie Parkour<br>World ✨</h1>
     <p>Hop across fluffy sky islands, collect shiny stars and reach the Rainbow Castle! Pick your challenge and let's go, cutie.</p>
+    <label for="characterSelect">Choose your character</label>
+    <select id="characterSelect"><option value="pink">🌸 Pink Bunny</option><option value="blue">🩵 Sky Bunny</option><option value="mint">🍃 Mint Bunny</option><option value="purple">💜 Purple Bunny</option><option value="gold">⭐ Golden Bunny</option></select>
     <label for="startDifficulty">Choose difficulty</label>
     <select id="startDifficulty"><option value="easy">🟢 Easy — wide platforms</option><option value="normal">🟡 Normal — trickier jumps</option><option value="hard">🔴 Hard — tiny platforms</option></select>
-    <p class="small">PC: WASD / arrow keys + Space · Mobile: on-screen arrows + Jump<br>Prototype runs in a modern browser and needs internet to load the 3D engine.</p>
+    <p class="small">PC: WASD / arrows + Space · Shift to sprint · double jump · Mobile: arrows + Run + Jump<br>Prototype runs in a modern browser and needs internet to load the 3D engine.</p>
     <button class="big" id="play">PLAY SOLO 💖</button>
     <div style="margin-top:16px;font-weight:900">👫 PLAY TOGETHER ONLINE</div>
     <div class="multiRow"><button id="createRoom">Create room</button></div>
     <div id="roomCodeDisplay">ROOM: <span id="roomCodeText"></span></div>
     <div class="multiRow"><input id="roomCode" maxlength="8" placeholder="ROOM CODE" aria-label="Room code"><button id="joinRoom">Join room</button></div>
     <div id="netStatus">Both players need the same game link and an internet connection.</div>
-    <p class="small">Prototype build 0.2 · PC + Android browser · online multiplayer beta</p>
+    <p class="small">Upgrade 0.4 · fluffy clouds, rainbow sky, mobile jump fix, player chat · online multiplayer beta</p>
   </div>
 </div>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
@@ -106,12 +118,18 @@ function box(x,y,z,w,h,d,material,receive=true){
 function sphere(x,y,z,r,material, sx=1,sy=1,sz=1){
  const m=new THREE.Mesh(sphereGeo,material);m.position.set(x,y,z);m.scale.set(r*sx,r*sy,r*sz);m.castShadow=true;scene.add(m);return m;
 }
-// Decorative cloud clusters
-for(let i=0;i<28;i++){
- const x=((i*17)%55)-27, z=-((i*13)%85)-3, y=2+((i*7)%15);
- sphere(x,y,z,1.5,mats.white,1.5,.55,.85);
- sphere(x+1.1,y+.25,z-.15,1.1,mats.white,1.2,.65,.8);
+// Fluffy floating cloud islands and drifting cloud banks
+const cloudGroups=[];
+for(let i=0;i<52;i++){
+ const x=((i*17)%75)-37, z=-((i*13)%105)-2, y=2+((i*7)%18);
+ const g=new THREE.Group();
+ const puff1=new THREE.Mesh(sphereGeo,mats.white);puff1.scale.set(2.2,.72,1.25);puff1.position.set(0,0,0);g.add(puff1);
+ const puff2=new THREE.Mesh(sphereGeo,mat(0xf7fbff));puff2.scale.set(1.55,.9,1.05);puff2.position.set(1.25,.22,-.12);g.add(puff2);
+ const puff3=new THREE.Mesh(sphereGeo,mat(0xffffff));puff3.scale.set(1.3,.65,.95);puff3.position.set(-1.15,.12,.12);g.add(puff3);
+ g.position.set(x,y,z);g.userData.drift=(i%2?1:-1)*(.12+(i%4)*.035);scene.add(g);cloudGroups.push(g);
 }
+// Decorative pastel rainbow over the sky route
+for(let r=0;r<5;r++){const arc=new THREE.Mesh(new THREE.TorusGeometry(3.8+r*.23,.09,8,48,Math.PI),new THREE.MeshBasicMaterial({color:[0xff8ac7,0xffc66d,0xffee91,0x9debd1,0x91dcff][r]}));arc.position.set(0,9,-39);arc.rotation.z=Math.PI;scene.add(arc);}
 const platforms=[], collectibles=[], checkpoints=[];
 const level=[
  [0,0,0,5.8,1,5.8,'mint','Start'],
@@ -182,6 +200,8 @@ for(const x of [-.22,.22]){
  const ear=new THREE.Mesh(sphereGeo,mat(0x8bdcff));ear.scale.set(.12,.25,.1);ear.position.set(x*.95,1.42,0);remotePlayer.add(ear);
 }
 remotePlayer.visible=false;
+function setRemoteCharacter(kind){const colors={pink:0xff8fca,blue:0x69cfff,mint:0x69d8b0,purple:0xb69aff,gold:0xffc94f};const c=colors[kind]||colors.blue;remoteBody.material.color.setHex(c);remotePlayer.children.forEach(o=>{if(o.material&&o.geometry===sphereGeo&&o!==remoteHead)o.material.color.setHex(c);});}
+const remoteHead=remotePlayer.children[1];
 let connection=null, peer=null, isMultiplayer=false, isRoomHost=false, lastNetSend=0, remoteTarget=null, roomId='';
 function setNetStatus(msg){const el=document.getElementById('netStatus');if(el)el.textContent=msg}
 function startGame(){document.getElementById('overlay').style.display='none';active=true;reset();toast(isMultiplayer?'Player connected! Have fun together 💖':'Reach the Rainbow Castle!')}
@@ -199,6 +219,8 @@ function setupConnection(conn){
      remoteTarget={x:Number(data.p[0]),y:Number(data.p[1]),z:Number(data.p[2]),r:Number(data.r)||0};
    }
    if(data && data.type==='event' && typeof data.msg==='string')toast(data.msg);
+   if(data && data.type==='chat' && typeof data.msg==='string'){addChat(data.msg,'Friend');showChatBubble(data.msg);}
+   if(data && data.type==='character' && typeof data.kind==='string'){setRemoteCharacter(data.kind);}
  });
  conn.on('close',()=>{setNetStatus('Other player disconnected. You can reconnect with the room code.');remotePlayer.visible=false;connection=null});
  conn.on('error',err=>setNetStatus('Connection issue: '+(err?.type||'please retry')));
@@ -216,8 +238,12 @@ function makePeer(id){
  }catch(e){setNetStatus('Could not start multiplayer. Check internet and try again.')}
 }
 function makeRoomCode(){return Math.random().toString(36).slice(2,8).toUpperCase()}
-const keys={w:false,a:false,s:false,d:false,space:false};
+const keys={w:false,a:false,s:false,d:false,space:false,shift:false};
+let jumpCount=0;
+let audioCtx=null;
+function playSfx(kind='jump'){if(!soundOn)return;try{audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==='suspended')audioCtx.resume();const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.connect(g);g.connect(audioCtx.destination);const now=audioCtx.currentTime;const tones={jump:[440,660],star:[740,1100],checkpoint:[520,780],win:[660,880]};const pair=tones[kind]||tones.jump;o.type='sine';o.frequency.setValueAtTime(pair[0],now);o.frequency.exponentialRampToValueAtTime(pair[1],now+.12);g.gain.setValueAtTime(.0001,now);g.gain.exponentialRampToValueAtTime(.12,now+.015);g.gain.exponentialRampToValueAtTime(.0001,now+.18);o.start(now);o.stop(now+.19)}catch(e){}}
 let active=false, difficulty='easy', stars=0, checkpoint={x:0,y:.02,z:0,name:'Start'}, grounded=false, vy=0, soundOn=true, won=false;
+let bubbleUntil=0;
 let lastToast=0;
 function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.style.opacity=1;lastToast=performance.now();setTimeout(()=>{if(performance.now()-lastToast>=850)el.style.opacity=0},900)}
 function setDifficulty(v){
@@ -226,22 +252,32 @@ function setDifficulty(v){
  toast(v==='easy'?'Easy mode: happy hopping!':v==='normal'?'Normal mode: you got this!':'Hard mode: precision time!');
 }
 function reset(){
- player.position.set(checkpoint.x,checkpoint.y,checkpoint.z);vy=0;grounded=false;won=false;
+ player.position.set(checkpoint.x,checkpoint.y,checkpoint.z);vy=0;grounded=false;jumpCount=0;won=false;
  camera.position.set(checkpoint.x,checkpoint.y+5,checkpoint.z+9);
 }
-function setCheckpoint(p){checkpoint={x:p.x,y:p.y+.02,z:p.z,name:p.name};document.getElementById('checkpoint').textContent=p.name;toast('💖 '+p.name+' saved!')}
-function collect(st){if(st.taken)return;st.taken=true;st.mesh.visible=false;stars++;document.getElementById('stars').textContent=stars;toast('✨ Star collected!');}
-function jump(){if(!active)return;if(grounded){vy=difficulty==='hard'?.205:difficulty==='normal'?.22:.235;grounded=false;}}
-window.addEventListener('keydown',e=>{const k=e.key.toLowerCase();if(k in keys){keys[k]=true;e.preventDefault()}if(k===' '||k==='spacebar'){keys.space=true;jump();e.preventDefault()}});
-window.addEventListener('keyup',e=>{const k=e.key.toLowerCase();if(k in keys)keys[k]=false;if(k===' '||k==='spacebar')keys.space=false});
+function setCheckpoint(p){if(checkpoint.name===p.name)return;checkpoint={x:p.x,y:p.top+.03,z:p.z,name:p.name};document.getElementById('checkpoint').textContent=p.name;toast('💖 '+p.name+' saved!');playSfx('checkpoint')}
+function showChatBubble(msg){const el=document.getElementById('chatBubble');el.textContent='💬 '+msg;el.style.display='block';bubbleUntil=performance.now()+4500}
+function collect(st){if(st.taken)return;st.taken=true;st.mesh.visible=false;stars++;document.getElementById('stars').textContent=stars;toast('✨ Star collected!');playSfx('star')}
+function jump(){if(!active)return;const maxJumps=2;if(grounded||jumpCount<maxJumps){vy=grounded?(difficulty==='hard'?.205:difficulty==='normal'?.22:.235):.19;grounded=false;jumpCount++;playSfx('jump');if(jumpCount===2)toast('✨ DOUBLE JUMP!')}}
+window.addEventListener('keydown',e=>{const k=e.key.toLowerCase();if(k in keys){keys[k]=true;e.preventDefault()}if(k==='shift')keys.shift=true;if(k===' '||k==='spacebar'){keys.space=true;jump();e.preventDefault()}});
+window.addEventListener('keyup',e=>{const k=e.key.toLowerCase();if(k in keys)keys[k]=false;if(k==='shift')keys.shift=false;if(k===' '||k==='spacebar')keys.space=false});
 document.querySelectorAll('[data-key]').forEach(b=>{
  const k=b.dataset.key;
  const on=e=>{e.preventDefault();keys[k]=true},off=e=>{e.preventDefault();keys[k]=false};
  b.addEventListener('pointerdown',on);['pointerup','pointercancel','pointerleave'].forEach(ev=>b.addEventListener(ev,off));
 });
+const sprintBtn=document.getElementById('sprintBtn');
+sprintBtn.addEventListener('pointerdown',e=>{e.preventDefault();keys.shift=true});['pointerup','pointercancel','pointerleave'].forEach(ev=>sprintBtn.addEventListener(ev,e=>{e.preventDefault();keys.shift=false}));
 const jumpBtn=document.getElementById('jumpBtn');
-jumpBtn.addEventListener('pointerdown',e=>{e.preventDefault();keys.space=true;jump()});
-['pointerup','pointercancel','pointerleave'].forEach(ev=>jumpBtn.addEventListener(ev,e=>{e.preventDefault();keys.space=false}));
+// Mobile fix: capture touch so the jump press is not cancelled when the finger shifts slightly.
+jumpBtn.addEventListener('pointerdown',e=>{e.preventDefault();try{jumpBtn.setPointerCapture(e.pointerId)}catch(_){} keys.space=true;jump()});
+['pointerup','pointercancel','lostpointercapture'].forEach(ev=>jumpBtn.addEventListener(ev,e=>{e.preventDefault();keys.space=false}));
+jumpBtn.addEventListener('click',e=>{e.preventDefault();jump()});
+const chatBox=document.getElementById('chatBox'), chatLog=document.getElementById('chatLog'), chatInput=document.getElementById('chatInput');
+document.getElementById('chatToggle').addEventListener('click',()=>{chatBox.style.display=chatBox.style.display==='flex'?'none':'flex';});
+function addChat(text,who='You'){const line=document.createElement('div');line.textContent=who+': '+text;chatLog.appendChild(line);chatLog.scrollTop=chatLog.scrollHeight;}
+function sendChat(){const msg=chatInput.value.trim();if(!msg)return;addChat(msg,'You');showChatBubble(msg);if(connection&&connection.open){try{connection.send({type:'chat',msg})}catch(_){}}else addChat('You are not connected to a friend yet.','System');chatInput.value='';chatInput.focus();}
+document.getElementById('chatSend').addEventListener('click',sendChat);chatInput.addEventListener('keydown',e=>{if(e.key==='Enter')sendChat()});
 document.getElementById('createRoom').addEventListener('click',()=>{
  roomId=makeRoomCode();isRoomHost=true;isMultiplayer=false;
  setNetStatus('Creating room…');makePeer('cutie-'+roomId.toLowerCase());
@@ -256,27 +292,33 @@ document.getElementById('joinRoom').addEventListener('click',()=>{
 document.getElementById('difficulty').addEventListener('change',e=>setDifficulty(e.target.value));
 document.getElementById('restart').addEventListener('click',()=>{reset();toast('Back to checkpoint!')});
 document.getElementById('sound').addEventListener('click',e=>{soundOn=!soundOn;e.target.textContent=soundOn?'🔊 Sound':'🔇 Sound';toast(soundOn?'Sound effects on':'Sound effects off')});
-document.getElementById('play').addEventListener('click',()=>{isMultiplayer=false;remotePlayer.visible=false;setDifficulty(document.getElementById('startDifficulty').value);startGame()});
+document.getElementById('play').addEventListener('click',()=>{isMultiplayer=false;remotePlayer.visible=false;setCharacter(document.getElementById('characterSelect').value);setDifficulty(document.getElementById('startDifficulty').value);startGame()});
+function setCharacter(kind){const colors={pink:[0xff8fca,0xffd9ec,0xffb4dc],blue:[0x69cfff,0xe4f7ff,0x8bdcff],mint:[0x69d8b0,0xd9fff0,0x8ce9c9],purple:[0xb69aff,0xeee4ff,0xc7aaff],gold:[0xffc94f,0xfff1b8,0xffd86b]};const c=colors[kind]||colors.pink;body2.material.color.setHex(c[0]);head.material.color.setHex(c[1]);player.children.forEach(o=>{if(o.material&&o.geometry===sphereGeo&&o!==head&&o!==body2){if(o.position.y>1.3)o.material.color.setHex(c[2]);}});if(connection&&connection.open){try{connection.send({type:'character',kind})}catch(_){}}}
+document.getElementById('characterSelect').addEventListener('change',e=>setCharacter(e.target.value));
 function nearestPlatform(x,z){let best=null;for(const p of platforms){if(Math.abs(x-p.x)<=p.w/2+.05 && Math.abs(z-p.z)<=p.d/2+.05){if(!best||p.top>best.top)best=p}}return best}
 const clock=new THREE.Clock();
 function animate(){
  requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.035),t=performance.now()*.001;
+ const bubble=document.getElementById('chatBubble');if(bubble.style.display!=='none'){if(performance.now()>bubbleUntil)bubble.style.display='none';else{const target=(isMultiplayer&&remotePlayer.visible)?remotePlayer:player;const v=target.position.clone();v.y+=2.0;v.project(camera);const sx=(v.x*.5+.5)*innerWidth,sy=(-v.y*.5+.5)*innerHeight;bubble.style.left=Math.max(8,Math.min(innerWidth-bubble.offsetWidth-8,sx-bubble.offsetWidth/2))+'px';bubble.style.top=Math.max(8,sy-bubble.offsetHeight-18)+'px';}}
+ cloudGroups.forEach(g=>{g.position.x+=g.userData.drift*dt;if(g.position.x>42)g.position.x=-42;if(g.position.x< -42)g.position.x=42;});
  collectibles.forEach((s,i)=>{if(!s.taken){s.mesh.rotation.y+=dt*1.8;s.mesh.position.y=level[i+1][1]+1.25+Math.sin(t*2+i)*.12;}});
  if(active&&!won){
    let f=(keys.w?1:0)-(keys.s?1:0), side=(keys.d?1:0)-(keys.a?1:0);
-   const speed=difficulty==='hard'?.105:difficulty==='normal'?.112:.12;
+   const baseSpeed=difficulty==='hard'?.105:difficulty==='normal'?.112:.12;const speed=baseSpeed*(keys.shift?1.65:1);document.getElementById('sprintBtn').textContent=keys.shift?'⚡ FAST':'⚡ RUN';
    const len=Math.hypot(f,side)||1;f/=len;side/=len;
    // forward is negative Z, camera follows behind the character
    player.position.x+=side*speed*60*dt;
    player.position.z-=f*speed*60*dt;
+   const previousY=player.position.y;
    vy-=.012*60*dt;player.position.y+=vy*60*dt;
    const p=nearestPlatform(player.position.x,player.position.z);
-   if(p && vy<=0 && player.position.y<=p.top+.03 && player.position.y>=p.top-.48){
-     player.position.y=p.top+.02;vy=0;grounded=true;
+   if(p && vy<=0 && previousY>=p.top-.12 && player.position.y<=p.top+.12){
+     player.position.y=p.top+.03;vy=0;grounded=true;jumpCount=0;
      if(p.name.startsWith('Checkpoint'))setCheckpoint(p);
-     if(p.name==='Finish'){won=true;toast('🏆 YOU DID IT! Rainbow Castle reached!');if(connection&&connection.open){try{connection.send({type:'event',msg:'🏆 Your friend reached the Rainbow Castle!'})}catch(e){}}document.getElementById('overlay').style.display='flex';document.getElementById('card').innerHTML='<h1>YOU DID IT! 🏆</h1><p>You reached the Rainbow Castle and collected '+stars+' stars! You are a parkour superstar.</p><button class="big" id="again">PLAY AGAIN 💖</button>';document.getElementById('again').onclick=()=>location.reload();}
-   }else grounded=false;
+     if(p.name==='Finish'){won=true;toast('🏆 YOU DID IT! Rainbow Castle reached!');playSfx('win');if(connection&&connection.open){try{connection.send({type:'event',msg:'🏆 Your friend reached the Rainbow Castle!'})}catch(e){}}document.getElementById('overlay').style.display='flex';document.getElementById('card').innerHTML='<h1>YOU DID IT! 🏆</h1><p>You reached the Rainbow Castle and collected '+stars+' stars! You are a parkour superstar.</p><button class="big" id="again">PLAY AGAIN 💖</button>';document.getElementById('again').onclick=()=>location.reload();}
+   }else if(!p || player.position.y>p.top+.2)grounded=false;
    if(player.position.y < -9 || player.position.z < -91){reset();toast('Oops! Back to checkpoint 💗')}
+   const progress=Math.max(0,Math.min(100,Math.round((Math.abs(Math.min(0,player.position.z))/79)*100)));document.getElementById('progressText').textContent=progress+'%';document.getElementById('progressFill').style.width=progress+'%';
    collectibles.forEach(s=>{if(!s.taken&&player.position.distanceTo(s.mesh.position)<1.15)collect(s)});
    // face movement direction and cute bobbing
    if(Math.abs(f)+Math.abs(side)>.05)player.rotation.y=Math.atan2(side,-f);
