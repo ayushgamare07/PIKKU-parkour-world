@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Cutie Parkour World</title>
+<style>
+  :root{--pink:#ff8fca;--ink:#463a67;--glass:rgba(255,255,255,.83)}
+  *{box-sizing:border-box} html,body{margin:0;width:100%;height:100%;overflow:hidden;font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:#b9e8ff;color:var(--ink);touch-action:none}
+  canvas{display:block}
+  #hud{position:fixed;inset:0;pointer-events:none}
+  .panel{background:var(--glass);border:2px solid rgba(255,255,255,.9);border-radius:18px;box-shadow:0 8px 25px #5e74a329;backdrop-filter:blur(8px);padding:10px 14px}
+  #brand{position:absolute;left:14px;top:12px;font-weight:900;font-size:clamp(15px,2.3vw,22px);letter-spacing:.2px}
+  #stats{position:absolute;right:14px;top:12px;text-align:right;font-weight:750;font-size:13px;line-height:1.65}
+  #tip{position:absolute;left:50%;top:12px;transform:translateX(-50%);font-size:12px;text-align:center;max-width:42vw}
+  #bottom{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);display:flex;gap:8px;align-items:center;pointer-events:auto}
+  button,select{font:inherit;color:var(--ink);border:0;border-radius:13px;padding:9px 12px;font-weight:800;background:#fff;box-shadow:0 3px 0 #d7cbe9;cursor:pointer}
+  button:active{transform:translateY(2px);box-shadow:0 1px 0 #d7cbe9}
+  #toast{position:absolute;left:50%;top:23%;transform:translateX(-50%);font-weight:900;font-size:clamp(18px,4vw,30px);text-shadow:0 2px #fff;background:#fff9;padding:8px 18px;border-radius:20px;opacity:0;transition:opacity .25s;text-align:center}
+  #overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,#c7f1ffdd,#ffd7f0e8);z-index:5;padding:18px}
+  #card{width:min(560px,100%);background:#fffdfd;border:3px solid white;border-radius:28px;padding:clamp(20px,4vw,34px);box-shadow:0 20px 60px #625c8b38;text-align:center}
+  #card h1{font-size:clamp(30px,7vw,52px);line-height:1.02;margin:0 0 8px;color:#ff69b6}
+  #card p{line-height:1.55;margin:10px 0 18px}
+  #card .big{font-size:17px;padding:13px 22px;background:#ff91c9;color:#fff;box-shadow:0 4px 0 #df6ba9}
+  #card label{font-weight:800;display:block;margin:12px 0 5px}
+  #card select{border:1px solid #e7d9f0;width:100%;max-width:260px}
+  .small{font-size:12px;opacity:.78}
+  .multiRow{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:10px 0}
+  #roomCode{width:150px;max-width:45%;border:2px solid #eadcf5;border-radius:12px;padding:10px;font:800 16px system-ui;text-transform:uppercase;text-align:center;color:#463a67}
+  #netStatus{font-size:12px;font-weight:800;min-height:18px;color:#6a5792}
+  #roomCodeDisplay{display:none;font-weight:900;letter-spacing:2px;background:#f4eaff;border-radius:12px;padding:8px 12px;margin:8px auto;width:max-content}
+  #touch{position:fixed;inset:auto 0 75px 0;display:none;justify-content:space-between;align-items:end;padding:0 18px;pointer-events:none;z-index:3}
+  .pad{display:grid;grid-template-columns:52px 52px 52px;grid-template-rows:52px 52px;gap:5px;pointer-events:auto}
+  .pad button,.jump{background:#ffffffbf;border:2px solid #fff;font-size:20px;width:52px;height:52px;padding:0;border-radius:16px;touch-action:none}
+  .pad .up{grid-column:2;grid-row:1}.pad .left{grid-column:1;grid-row:2}.pad .down{grid-column:2;grid-row:2}.pad .right{grid-column:3;grid-row:2}
+  .jump{width:72px;height:72px;border-radius:50%;background:#ff91c9e8;color:#fff;font-size:14px}
+  @media (pointer:coarse){#touch{display:flex}#tip{top:72px;max-width:80vw}#bottom{bottom:8px}}
+</style>
+</head>
+<body>
+<div id="hud">
+  <div id="brand" class="panel">🌈 CUTIE PARKOUR WORLD</div>
+  <div id="tip" class="panel">WASD / arrows · SPACE jump · stars ✨ · Online room mode available</div>
+  <div id="stats" class="panel">⭐ Stars: <span id="stars">0</span>/<span id="total">8</span><br>🏁 Checkpoint: <span id="checkpoint">Start</span><br>🎯 Mode: <span id="modeLabel">Easy</span></div>
+  <div id="toast"></div>
+  <div id="bottom" class="panel">
+    <select id="difficulty" aria-label="Difficulty">
+      <option value="easy">🟢 Easy</option><option value="normal">🟡 Normal</option><option value="hard">🔴 Hard</option>
+    </select>
+    <button id="restart">↻ Restart</button><button id="sound">🔊 Sound</button>
+  </div>
+</div>
+<div id="touch">
+  <div class="pad">
+    <button class="up" data-key="w">▲</button><button class="left" data-key="a">◀</button><button class="down" data-key="s">▼</button><button class="right" data-key="d">▶</button>
+  </div>
+  <button class="jump" id="jumpBtn">JUMP ✨</button>
+</div>
+<div id="overlay">
+  <div id="card">
+    <h1>Cutie Parkour<br>World ✨</h1>
+    <p>Hop across fluffy sky islands, collect shiny stars and reach the Rainbow Castle! Pick your challenge and let's go, cutie.</p>
+    <label for="startDifficulty">Choose difficulty</label>
+    <select id="startDifficulty"><option value="easy">🟢 Easy — wide platforms</option><option value="normal">🟡 Normal — trickier jumps</option><option value="hard">🔴 Hard — tiny platforms</option></select>
+    <p class="small">PC: WASD / arrow keys + Space · Mobile: on-screen arrows + Jump<br>Prototype runs in a modern browser and needs internet to load the 3D engine.</p>
+    <button class="big" id="play">PLAY SOLO 💖</button>
+    <div style="margin-top:16px;font-weight:900">👫 PLAY TOGETHER ONLINE</div>
+    <div class="multiRow"><button id="createRoom">Create room</button></div>
+    <div id="roomCodeDisplay">ROOM: <span id="roomCodeText"></span></div>
+    <div class="multiRow"><input id="roomCode" maxlength="8" placeholder="ROOM CODE" aria-label="Room code"><button id="joinRoom">Join room</button></div>
+    <div id="netStatus">Both players need the same game link and an internet connection.</div>
+    <p class="small">Prototype build 0.2 · PC + Android browser · online multiplayer beta</p>
+  </div>
+</div>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xbbeaff);
+scene.fog = new THREE.Fog(0xbbeaff, 28, 95);
+const camera = new THREE.PerspectiveCamera(68, innerWidth/innerHeight, .1, 180);
+const renderer = new THREE.WebGLRenderer({antialias:true, powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio, 1.8));
+renderer.setSize(innerWidth,innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+document.body.prepend(renderer.domElement);
+
+scene.add(new THREE.HemisphereLight(0xffffff,0x8a9fd6,2.0));
+const sun = new THREE.DirectionalLight(0xffffff,2.2); sun.position.set(-8,18,10); sun.castShadow=true; sun.shadow.mapSize.set(1024,1024); scene.add(sun);
+
+const mat=(color,roughness=.78)=>new THREE.MeshStandardMaterial({color,roughness});
+const mats={
+  pink:mat(0xff9fd3), blue:mat(0x91dcff), mint:mat(0x9debd1), yellow:mat(0xffe58b),
+  lilac:mat(0xc6b0ff), white:mat(0xffffff), grass:mat(0x9fe8bb), dark:mat(0x745c9b),
+  gold: new THREE.MeshStandardMaterial({color:0xffcf48,metalness:.35,roughness:.28}),
+  eye:mat(0x493e70), cheek: new THREE.MeshBasicMaterial({color:0xff80b7})
+};
+const boxGeo=new THREE.BoxGeometry(1,1,1);
+const sphereGeo=new THREE.SphereGeometry(1,16,12);
+function box(x,y,z,w,h,d,material,receive=true){
+ const m=new THREE.Mesh(boxGeo,material);m.position.set(x,y,z);m.scale.set(w,h,d);m.castShadow=true;m.receiveShadow=receive;scene.add(m);return m;
+}
+function sphere(x,y,z,r,material, sx=1,sy=1,sz=1){
+ const m=new THREE.Mesh(sphereGeo,material);m.position.set(x,y,z);m.scale.set(r*sx,r*sy,r*sz);m.castShadow=true;scene.add(m);return m;
+}
+// Decorative cloud clusters
+for(let i=0;i<28;i++){
+ const x=((i*17)%55)-27, z=-((i*13)%85)-3, y=2+((i*7)%15);
+ sphere(x,y,z,1.5,mats.white,1.5,.55,.85);
+ sphere(x+1.1,y+.25,z-.15,1.1,mats.white,1.2,.65,.8);
+}
+const platforms=[], collectibles=[], checkpoints=[];
+const level=[
+ [0,0,0,5.8,1,5.8,'mint','Start'],
+ [0,0,-7,4.4,1,4.1,'pink'],
+ [2,1,-13,3.8,1,3.8,'blue'],
+ [5,1.8,-19,3.5,1,3.5,'yellow'],
+ [3,2.4,-25,3.4,1,3.4,'lilac','Checkpoint 1'],
+ [-1,3.0,-31,3.4,1,3.4,'pink'],
+ [-5,3.5,-37,3.1,1,3.1,'mint'],
+ [-5,4.1,-43,3.2,1,3.2,'blue','Checkpoint 2'],
+ [-1,4.7,-49,3.1,1,3.1,'yellow'],
+ [4,5.4,-55,2.9,1,2.9,'pink'],
+ [7,6.0,-61,3.0,1,3.0,'lilac'],
+ [4,6.7,-67,3.2,1,3.2,'mint','Checkpoint 3'],
+ [-1,7.4,-73,3.2,1,3.2,'blue'],
+ [-5,8.0,-79,3.6,1,3.6,'yellow','Finish']
+];
+const colorMap={pink:mats.pink,blue:mats.blue,mint:mats.mint,yellow:mats.yellow,lilac:mats.lilac};
+function makePlatform(p,i){
+ const m=box(p[0],p[1]-.5,p[2],p[3],p[4],p[5],colorMap[p[6]]);
+ const trim=box(p[0],p[1]-.08,p[2],p[3]*.94,.12,p[5]*.94,mat(0xffffff));
+ platforms.push({mesh:m,x:p[0],top:p[1],z:p[2],w:p[3],d:p[5],name:p[7]||''});
+ // tiny flower dots
+ for(let j=0;j<3;j++) sphere(p[0]+(j-1)*.38,p[1]+.06,p[2]+p[5]*.28,.09,[mats.white,mats.pink,mats.yellow][j],1,.35,1);
+ if(p[7] && p[7].startsWith('Checkpoint')) {
+   const pole=box(p[0]+p[3]*.28,p[1]+1,p[2],.12,2,.12,mats.white);
+   sphere(p[0]+p[3]*.28+.35,p[1]+1.65,p[2],.45,mats.pink,1,.65,.08);
+   checkpoints.push({x:p[0],y:p[1]+.1,z:p[2],name:p[7]});
+ }
+ if(p[7]==='Finish'){
+   // castle towers and rainbow arch
+   box(p[0],p[1]+1,p[2],2.8,1.6,2.8,mats.pink);
+   for(const dx of [-1.05,1.05]){box(p[0]+dx,p[1]+2,p[2],.55,2,.55,mats.lilac);sphere(p[0]+dx,p[1]+3.2,p[2],.35,mats.gold)}
+   const arch=new THREE.Mesh(new THREE.TorusGeometry(1.3,.15,8,24,Math.PI),mat(0xff8ac7));arch.position.set(p[0],p[1]+2.5,p[2]-1.1);scene.add(arch);
+ }
+}
+level.forEach(makePlatform);
+// Star collectibles
+const starShape=new THREE.Shape();
+for(let i=0;i<10;i++){const a=Math.PI/2+i*Math.PI/5,r=i%2===0?.52:.23;const x=Math.cos(a)*r,y=Math.sin(a)*r;i===0?starShape.moveTo(x,y):starShape.lineTo(x,y)}
+starShape.closePath();
+const starGeo=new THREE.ExtrudeGeometry(starShape,{depth:.12,bevelEnabled:true,bevelSegments:2,steps:1,bevelSize:.04,bevelThickness:.04});
+for(let i=1;i<level.length-1;i++){
+ const p=level[i], star=new THREE.Mesh(starGeo,mats.gold);star.position.set(p[0],p[1]+1.25,p[2]);star.castShadow=true;scene.add(star);collectibles.push({mesh:star,taken:false});
+}
+document.getElementById('total').textContent=collectibles.length;
+
+// cute player character, capsule-like body + head + ears
+const player=new THREE.Group();scene.add(player);
+const body=sphere(0,0,0,.42,mats.pink,1,1.1,.82);player.add(body);scene.remove(body);
+const body2=new THREE.Mesh(sphereGeo,mats.pink);body2.scale.set(.38,.48,.32);body2.position.y=.52;body2.castShadow=true;player.add(body2);
+const head=new THREE.Mesh(sphereGeo,mat(0xffd9ec));head.scale.set(.42,.39,.38);head.position.y=1.05;head.castShadow=true;player.add(head);
+for(const x of [-.22,.22]){
+ const eye=new THREE.Mesh(sphereGeo,mats.eye);eye.scale.set(.055,.075,.04);eye.position.set(x,1.08,.345);player.add(eye);
+ const cheek=new THREE.Mesh(sphereGeo,mats.cheek);cheek.scale.set(.09,.045,.025);cheek.position.set(x*1.6,.94,.345);player.add(cheek);
+ const ear=new THREE.Mesh(sphereGeo,mat(0xffb4dc));ear.scale.set(.12,.25,.1);ear.position.set(x*.95,1.42,0);ear.rotation.z=-x*.7;player.add(ear);
+}
+const feet=[];
+for(const x of [-.2,.2]){const f=new THREE.Mesh(sphereGeo,mats.lilac);f.scale.set(.14,.12,.22);f.position.set(x,.12,.04);player.add(f);feet.push(f)}
+player.position.set(0,.02,0);
+
+// Second cute character controlled by the other online player
+const remotePlayer = new THREE.Group(); scene.add(remotePlayer);
+const remoteBody = new THREE.Mesh(sphereGeo, mat(0x8bdcff)); remoteBody.scale.set(.38,.48,.32); remoteBody.position.y=.52; remotePlayer.add(remoteBody);
+const remoteHead = new THREE.Mesh(sphereGeo, mat(0xe4f7ff)); remoteHead.scale.set(.42,.39,.38); remoteHead.position.y=1.05; remotePlayer.add(remoteHead);
+for(const x of [-.22,.22]){
+ const eye=new THREE.Mesh(sphereGeo,mats.eye);eye.scale.set(.055,.075,.04);eye.position.set(x,1.08,.345);remotePlayer.add(eye);
+ const ear=new THREE.Mesh(sphereGeo,mat(0x8bdcff));ear.scale.set(.12,.25,.1);ear.position.set(x*.95,1.42,0);remotePlayer.add(ear);
+}
+remotePlayer.visible=false;
+let connection=null, peer=null, isMultiplayer=false, isRoomHost=false, lastNetSend=0, remoteTarget=null, roomId='';
+function setNetStatus(msg){const el=document.getElementById('netStatus');if(el)el.textContent=msg}
+function startGame(){document.getElementById('overlay').style.display='none';active=true;reset();toast(isMultiplayer?'Player connected! Have fun together 💖':'Reach the Rainbow Castle!')}
+function setupConnection(conn){
+ connection=conn;
+ conn.on('open',()=>{
+   isMultiplayer=true;remotePlayer.visible=true;
+   setNetStatus('Connected! You are ready to parkour together 💖');
+   document.getElementById('roomCodeDisplay').style.display='block';
+   document.getElementById('roomCodeText').textContent=roomId;
+   startGame();
+ });
+ conn.on('data',data=>{
+   if(data && data.type==='state' && Array.isArray(data.p) && data.p.length===3){
+     remoteTarget={x:Number(data.p[0]),y:Number(data.p[1]),z:Number(data.p[2]),r:Number(data.r)||0};
+   }
+   if(data && data.type==='event' && typeof data.msg==='string')toast(data.msg);
+ });
+ conn.on('close',()=>{setNetStatus('Other player disconnected. You can reconnect with the room code.');remotePlayer.visible=false;connection=null});
+ conn.on('error',err=>setNetStatus('Connection issue: '+(err?.type||'please retry')));
+}
+function makePeer(id){
+ if(!window.Peer){setNetStatus('Multiplayer library did not load. Check internet and refresh.');return}
+ try{
+   peer=new window.Peer(id);
+   peer.on('open',()=>{setNetStatus('Room ready! Send the room code to your girlfriend. Waiting for her to join…');document.getElementById('roomCodeDisplay').style.display='block';document.getElementById('roomCodeText').textContent=roomId;document.getElementById('roomCode').value=roomId;});
+   peer.on('connection',conn=>setupConnection(conn));
+   peer.on('error',err=>{
+     if(err.type==='unavailable-id'){setNetStatus('That room code is already in use. Create another room.');}
+     else setNetStatus('Network error: '+(err.type||'please retry'));
+   });
+ }catch(e){setNetStatus('Could not start multiplayer. Check internet and try again.')}
+}
+function makeRoomCode(){return Math.random().toString(36).slice(2,8).toUpperCase()}
+const keys={w:false,a:false,s:false,d:false,space:false};
+let active=false, difficulty='easy', stars=0, checkpoint={x:0,y:.02,z:0,name:'Start'}, grounded=false, vy=0, soundOn=true, won=false;
+let lastToast=0;
+function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.style.opacity=1;lastToast=performance.now();setTimeout(()=>{if(performance.now()-lastToast>=850)el.style.opacity=0},900)}
+function setDifficulty(v){
+ difficulty=v;document.getElementById('difficulty').value=v;document.getElementById('modeLabel').textContent=v[0].toUpperCase()+v.slice(1);
+ const factors={easy:1,normal:.83,hard:.69}; platforms.forEach((p,i)=>{if(i>0){const base=level[i];p.w=base[3]*factors[v];p.d=base[5]*factors[v];p.mesh.scale.x=p.w;p.mesh.scale.z=p.d;}});
+ toast(v==='easy'?'Easy mode: happy hopping!':v==='normal'?'Normal mode: you got this!':'Hard mode: precision time!');
+}
+function reset(){
+ player.position.set(checkpoint.x,checkpoint.y,checkpoint.z);vy=0;grounded=false;won=false;
+ camera.position.set(checkpoint.x,checkpoint.y+5,checkpoint.z+9);
+}
+function setCheckpoint(p){checkpoint={x:p.x,y:p.y+.02,z:p.z,name:p.name};document.getElementById('checkpoint').textContent=p.name;toast('💖 '+p.name+' saved!')}
+function collect(st){if(st.taken)return;st.taken=true;st.mesh.visible=false;stars++;document.getElementById('stars').textContent=stars;toast('✨ Star collected!');}
+function jump(){if(!active)return;if(grounded){vy=difficulty==='hard'?.205:difficulty==='normal'?.22:.235;grounded=false;}}
+window.addEventListener('keydown',e=>{const k=e.key.toLowerCase();if(k in keys){keys[k]=true;e.preventDefault()}if(k===' '||k==='spacebar'){keys.space=true;jump();e.preventDefault()}});
+window.addEventListener('keyup',e=>{const k=e.key.toLowerCase();if(k in keys)keys[k]=false;if(k===' '||k==='spacebar')keys.space=false});
+document.querySelectorAll('[data-key]').forEach(b=>{
+ const k=b.dataset.key;
+ const on=e=>{e.preventDefault();keys[k]=true},off=e=>{e.preventDefault();keys[k]=false};
+ b.addEventListener('pointerdown',on);['pointerup','pointercancel','pointerleave'].forEach(ev=>b.addEventListener(ev,off));
+});
+const jumpBtn=document.getElementById('jumpBtn');
+jumpBtn.addEventListener('pointerdown',e=>{e.preventDefault();keys.space=true;jump()});
+['pointerup','pointercancel','pointerleave'].forEach(ev=>jumpBtn.addEventListener(ev,e=>{e.preventDefault();keys.space=false}));
+document.getElementById('createRoom').addEventListener('click',()=>{
+ roomId=makeRoomCode();isRoomHost=true;isMultiplayer=false;
+ setNetStatus('Creating room…');makePeer('cutie-'+roomId.toLowerCase());
+});
+document.getElementById('joinRoom').addEventListener('click',()=>{
+ const code=document.getElementById('roomCode').value.trim().toUpperCase();
+ if(!/^[A-Z0-9]{4,8}$/.test(code)){setNetStatus('Enter a valid 4–8 character room code.');return}
+ if(!window.Peer){setNetStatus('Multiplayer library did not load. Check internet and refresh.');return}
+ roomId=code;setNetStatus('Connecting to room '+code+'…');
+ try{peer=new window.Peer();peer.on('open',()=>{const conn=peer.connect('cutie-'+code.toLowerCase(),{reliable:true});setupConnection(conn)});peer.on('error',err=>setNetStatus('Could not join room: '+(err.type||'check code and retry')))}catch(e){setNetStatus('Could not connect. Check internet and retry.')}
+});
+document.getElementById('difficulty').addEventListener('change',e=>setDifficulty(e.target.value));
+document.getElementById('restart').addEventListener('click',()=>{reset();toast('Back to checkpoint!')});
+document.getElementById('sound').addEventListener('click',e=>{soundOn=!soundOn;e.target.textContent=soundOn?'🔊 Sound':'🔇 Sound';toast(soundOn?'Sound effects on':'Sound effects off')});
+document.getElementById('play').addEventListener('click',()=>{isMultiplayer=false;remotePlayer.visible=false;setDifficulty(document.getElementById('startDifficulty').value);startGame()});
+function nearestPlatform(x,z){let best=null;for(const p of platforms){if(Math.abs(x-p.x)<=p.w/2+.05 && Math.abs(z-p.z)<=p.d/2+.05){if(!best||p.top>best.top)best=p}}return best}
+const clock=new THREE.Clock();
+function animate(){
+ requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.035),t=performance.now()*.001;
+ collectibles.forEach((s,i)=>{if(!s.taken){s.mesh.rotation.y+=dt*1.8;s.mesh.position.y=level[i+1][1]+1.25+Math.sin(t*2+i)*.12;}});
+ if(active&&!won){
+   let f=(keys.w?1:0)-(keys.s?1:0), side=(keys.d?1:0)-(keys.a?1:0);
+   const speed=difficulty==='hard'?.105:difficulty==='normal'?.112:.12;
+   const len=Math.hypot(f,side)||1;f/=len;side/=len;
+   // forward is negative Z, camera follows behind the character
+   player.position.x+=side*speed*60*dt;
+   player.position.z-=f*speed*60*dt;
+   vy-=.012*60*dt;player.position.y+=vy*60*dt;
+   const p=nearestPlatform(player.position.x,player.position.z);
+   if(p && vy<=0 && player.position.y<=p.top+.03 && player.position.y>=p.top-.48){
+     player.position.y=p.top+.02;vy=0;grounded=true;
+     if(p.name.startsWith('Checkpoint'))setCheckpoint(p);
+     if(p.name==='Finish'){won=true;toast('🏆 YOU DID IT! Rainbow Castle reached!');if(connection&&connection.open){try{connection.send({type:'event',msg:'🏆 Your friend reached the Rainbow Castle!'})}catch(e){}}document.getElementById('overlay').style.display='flex';document.getElementById('card').innerHTML='<h1>YOU DID IT! 🏆</h1><p>You reached the Rainbow Castle and collected '+stars+' stars! You are a parkour superstar.</p><button class="big" id="again">PLAY AGAIN 💖</button>';document.getElementById('again').onclick=()=>location.reload();}
+   }else grounded=false;
+   if(player.position.y < -9 || player.position.z < -91){reset();toast('Oops! Back to checkpoint 💗')}
+   collectibles.forEach(s=>{if(!s.taken&&player.position.distanceTo(s.mesh.position)<1.15)collect(s)});
+   // face movement direction and cute bobbing
+   if(Math.abs(f)+Math.abs(side)>.05)player.rotation.y=Math.atan2(side,-f);
+   player.position.y+=grounded?Math.sin(t*8)*.012:0;
+ }
+ if(isMultiplayer && connection && connection.open && performance.now()-lastNetSend>60){
+   lastNetSend=performance.now();
+   try{connection.send({type:'state',p:[player.position.x,player.position.y,player.position.z],r:player.rotation.y})}catch(e){}
+ }
+ if(remoteTarget && remotePlayer.visible){
+   remotePlayer.position.lerp(new THREE.Vector3(remoteTarget.x,remoteTarget.y,remoteTarget.z),.32);
+   remotePlayer.rotation.y=remoteTarget.r;
+ }
+ const target=new THREE.Vector3(player.position.x,player.position.y+.7,player.position.z);
+ const desired=new THREE.Vector3(player.position.x,player.position.y+4.3,player.position.z+7.5);
+ camera.position.lerp(desired,1-Math.pow(.001,dt));camera.lookAt(target);
+ renderer.render(scene,camera);
+}
+animate();
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.8))});
+</script>
+</body>
+</html>
